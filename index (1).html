@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6EFE2">
+<title>Shok Café-Bar · Bar Mode AR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--azul:#0A3D91;--crema:#F6EFE2;--azul-osc:#072C6B}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-family:'Fredoka',system-ui,sans-serif;color:var(--azul)}
+#ar{position:fixed;inset:0}
+.pantalla{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;background:var(--crema);z-index:30}
+.pantalla.oculta{display:none}
+.marco{position:absolute;inset:12px;border:3px solid var(--azul);border-radius:26px;pointer-events:none}
+.logo{width:min(80vw,380px)}
+.lema{font-family:'Caveat',cursive;font-size:30px;margin:-6px 0 6px}
+.texto{max-width:320px;line-height:1.4;font-size:16px}
+.btn-azul{font:700 20px 'Fredoka',sans-serif;color:var(--crema);background:var(--azul);border:0;border-radius:999px;padding:16px 34px;box-shadow:0 6px 0 var(--azul-osc);cursor:pointer}
+.btn-azul:active{transform:translateY(4px);box-shadow:0 2px 0 var(--azul-osc)}
+.pasos{display:flex;gap:10px;font-size:13px;font-weight:600}
+.pasos span{border:2px solid var(--azul);border-radius:999px;padding:6px 12px}
+.cargando{font-weight:600}
+.puntos::after{content:'';animation:p 1.2s steps(4) infinite}
+@keyframes p{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+#error{color:#B3261E;max-width:320px;font-size:15px}
+/* Guía de escaneo */
+#guia{position:fixed;left:0;right:0;top:12vh;z-index:10;display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;transition:opacity .3s}
+#guia.oculta{opacity:0}
+.visor{width:62vw;max-width:280px;aspect-ratio:2/3;border-radius:22px;border:4px dashed var(--crema);box-shadow:0 0 0 2000px rgba(7,44,107,.28);animation:pulso 1.8s ease-in-out infinite}
+@keyframes pulso{50%{transform:scale(1.03)}}
+.chip{background:var(--crema);color:var(--azul);font-weight:700;padding:10px 18px;border-radius:999px;border:3px solid var(--azul)}
+/* Botones-título */
+#botones{position:fixed;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));z-index:20;display:flex;justify-content:center;gap:10px;padding:0 12px;transition:transform .35s,opacity .35s}
+#botones.oculta{transform:translateY(130%);opacity:0;pointer-events:none}
+.cat{flex:1;max-width:150px;background:var(--crema);border:3px solid var(--azul);border-radius:18px;padding:10px 8px;cursor:pointer;box-shadow:0 5px 0 var(--azul-osc);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.cat img{width:100%;height:34px;object-fit:contain;display:block}
+.cat:active{transform:translateY(3px);box-shadow:0 2px 0 var(--azul-osc)}
+.cat.activo{background:var(--azul)}
+.cat.activo img{filter:brightness(0) invert(.95) sepia(.1)}
+/* Diálogo */
+#dialogo{position:fixed;left:12px;right:12px;bottom:calc(max(18px,env(safe-area-inset-bottom)) + 86px);z-index:25;max-width:440px;margin:0 auto;max-height:46vh;overflow:auto;background:var(--crema);border:3px solid var(--azul);border-radius:24px;padding:16px 18px 18px;box-shadow:0 8px 0 var(--azul-osc);transform:translateY(20px) scale(.97);opacity:0;pointer-events:none;transition:.25s}
+#dialogo.abierto{transform:none;opacity:1;pointer-events:auto}
+#dialogo header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#dialogo header img{height:34px;max-width:70%;object-fit:contain}
+#cerrar{font:700 18px 'Fredoka';background:var(--azul);color:var(--crema);border:0;border-radius:50%;width:34px;height:34px;cursor:pointer}
+#dialogo h2{margin:12px 0 4px;font-size:22px}
+#dialogo p{margin:0 0 10px;font-size:15px;line-height:1.4}
+#dialogo ul{list-style:none;margin:0;padding:0}
+#dialogo li{display:flex;align-items:baseline;gap:8px;padding:5px 0;font-size:16px;font-weight:600}
+#dialogo li i{flex:1;border-bottom:2px dotted var(--azul);opacity:.5;transform:translateY(-3px)}
+.nuevo{font-size:10px;background:var(--azul);color:var(--crema);border-radius:999px;padding:2px 8px}
+</style>
+<script type="importmap">
+{"imports":{
+ "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+ "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+ "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"}}
+</script>
+</head>
+<body>
+<div id="ar"></div>
+
+<section class="pantalla" id="inicio">
+  <div class="marco"></div>
+  <img class="logo" src="assets/logo.png" alt="Shok Café-Bar">
+  <div class="lema">Cambia de modo</div>
+  <p class="texto">Apunta la cámara de tu celular al menú y activa el <b>Bar Mode</b> en realidad aumentada.</p>
+  <div class="pasos"><span>1 · Permite la cámara</span><span>2 · Apunta al menú</span></div>
+  <button class="btn-azul" id="activar">Activar Bar Mode</button>
+</section>
+
+<section class="pantalla oculta" id="cargando">
+  <div class="marco"></div>
+  <img class="logo" src="assets/logo.png" alt="">
+  <div class="cargando">Preparando la cámara<span class="puntos"></span></div>
+  <div id="error"></div>
+</section>
+
+<div id="guia" class="oculta"><div class="visor"></div><div class="chip">Apunta al menú de Shok</div></div>
+
+<nav id="botones" class="oculta">
+  <button class="cat" data-k="cafe" aria-label="Café"><img src="assets/btn-cafe.png" alt="Café"></button>
+  <button class="cat" data-k="cocteles" aria-label="Cocteles"><img src="assets/btn-cocteles.png" alt="Cocteles"></button>
+  <button class="cat" data-k="snacks" aria-label="Snacks"><img src="assets/btn-snacks.png" alt="Snacks"></button>
+</nav>
+
+<aside id="dialogo" role="dialog" aria-live="polite">
+  <header><img id="d-titulo" alt=""><button id="cerrar" aria-label="Cerrar">×</button></header>
+  <h2 id="d-nombre"></h2><p id="d-texto"></p><ul id="d-lista"></ul>
+</aside>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ====== CONTENIDO (edita aquí textos, precios y sonidos) ====== */
+const AZUL = 0x0A3D91;
+const CAT = {
+  cafe:{titulo:'assets/btn-cafe.png', img:'assets/cafe.webp', nombre:'Café de especialidad',
+    texto:'Granos seleccionados y preparados al momento. Ideales para arrancar el día en modo café.',
+    items:[['Espresso','$4.5'],['Americano','$5'],['Latte','$5.5'],['Capuccino','$5.5'],['Cold Brew','$6']],
+    notas:[523.25,659.25,783.99], onda:'triangle'},
+  cocteles:{titulo:'assets/btn-cocteles.png', img:'assets/coctel.webp', nombre:'Cocteles de la casa',
+    texto:'Cuando cae la noche, cambia de modo. Prueba el nuevo Blue Bayou: cítrico, dulce y servido bien frío.',
+    items:[['Blue Bayou','$10','NUEVO'],['Sunset Sour','$9'],['Tropical Mind','$9'],['Midnight Bliss','$10']],
+    notas:[1318.5,1760,2093], onda:'sine'},
+  snacks:{titulo:'assets/btn-snacks.png', img:'assets/snack.webp', nombre:'Snacks y postres',
+    texto:'El complemento perfecto para tu café o tu coctel, hechos para compartir.',
+    items:[['Cheesecake','$6'],['Croissant','$5'],['Brownie','$5'],['Chips de la casa','$4']],
+    notas:[392,587.33,783.99], onda:'square'}
+};
+
+/* ====== SONIDO (WebAudio, sin archivos) ====== */
+let audio;
+function tono(notas,onda='sine',vol=.18){
+  if(!audio) return;
+  const t0=audio.currentTime;
+  notas.forEach((f,i)=>{
+    const o=audio.createOscillator(), g=audio.createGain();
+    o.type=onda; o.frequency.value=f;
+    g.gain.setValueAtTime(0,t0+i*.09); g.gain.linearRampToValueAtTime(vol,t0+i*.09+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t0+i*.09+.45);
+    o.connect(g).connect(audio.destination); o.start(t0+i*.09); o.stop(t0+i*.09+.5);
+  });
+}
+
+/* ====== UI ====== */
+const $=s=>document.querySelector(s);
+const botones=$('#botones'), guia=$('#guia'), dialogo=$('#dialogo');
+let actual=null, encontrado=false, ocultar;
+
+function abrirDialogo(k){
+  const c=CAT[k];
+  $('#d-titulo').src=c.titulo; $('#d-nombre').textContent=c.nombre; $('#d-texto').textContent=c.texto;
+  $('#d-lista').innerHTML=c.items.map(([n,p,b])=>`<li>${n}${b?`<span class="nuevo">${b}</span>`:''}<i></i><span>${p}</span></li>`).join('');
+  dialogo.classList.add('abierto');
+}
+function cerrarDialogo(){ dialogo.classList.remove('abierto'); }
+
+/* ====== AR ====== */
+async function iniciar(){
+  audio = new (window.AudioContext||window.webkitAudioContext)(); audio.resume();
+  $('#inicio').classList.add('oculta'); $('#cargando').classList.remove('oculta');
+  try{
+    const { MindARThree } = await import('mindar-image-three');
+    const mindar = new MindARThree({container:$('#ar'), imageTargetSrc:'assets/targets.mind', uiLoading:'no', uiScanning:'no', uiError:'no'});
+    const {renderer,scene,camera} = mindar;
+    const ancla = mindar.addAnchor(0);
+    const loader = new THREE.TextureLoader();
+
+    // Disco azul de marca detrás del producto
+    const disco = new THREE.Mesh(new THREE.CircleGeometry(.46,64), new THREE.MeshBasicMaterial({color:AZUL,transparent:true,opacity:.92}));
+    disco.position.z=.04; disco.visible=false; ancla.group.add(disco);
+
+    // Un plano por producto (se escala según la proporción de su imagen)
+    const planos={};
+    await Promise.all(Object.entries(CAT).map(([k,c])=>new Promise(res=>{
+      loader.load(c.img,tex=>{
+        tex.colorSpace=THREE.SRGBColorSpace;
+        const w=.82, h=w*tex.image.height/tex.image.width;
+        const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+        m.position.z=.14; m.visible=false; m.userData.t0=0; ancla.group.add(m); planos[k]=m; res();
+      },undefined,res);
+    })));
+
+    ancla.onTargetFound=()=>{
+      encontrado=true; clearTimeout(ocultar);
+      guia.classList.add('oculta'); botones.classList.remove('oculta'); tono([880,1318.5],'sine',.12);
+    };
+    ancla.onTargetLost=()=>{
+      encontrado=false;
+      ocultar=setTimeout(()=>{ if(!encontrado){ botones.classList.add('oculta'); guia.classList.remove('oculta'); } },1500);
+    };
+
+    function seleccionar(k){
+      const c=CAT[k]; tono(c.notas,c.onda);
+      document.querySelectorAll('.cat').forEach(b=>b.classList.toggle('activo',b.dataset.k===k));
+      Object.values(planos).forEach(p=>p.visible=false);
+      if(planos[k]){ planos[k].visible=true; planos[k].userData.t0=performance.now(); disco.visible=true; }
+      actual=k; abrirDialogo(k);
+    }
+    document.querySelectorAll('.cat').forEach(b=>b.addEventListener('click',()=>seleccionar(b.dataset.k)));
+    $('#cerrar').addEventListener('click',()=>{ cerrarDialogo(); document.querySelectorAll('.cat').forEach(b=>b.classList.remove('activo')); Object.values(planos).forEach(p=>p.visible=false); disco.visible=false; actual=null; });
+
+    await mindar.start();
+    $('#cargando').classList.add('oculta'); guia.classList.remove('oculta');
+    renderer.setAnimationLoop(()=>{
+      const now=performance.now();
+      if(actual&&planos[actual]){
+        const p=planos[actual], e=Math.min((now-p.userData.t0)/450,1);
+        const pop=1-Math.pow(1-e,3); // ease-out
+        p.scale.setScalar(.4+.6*pop); p.position.y=Math.sin(now/600)*.03; p.rotation.z=Math.sin(now/900)*.04;
+        disco.scale.setScalar(.6+.4*pop);
+      }
+      renderer.render(scene,camera);
+    });
+    window.addEventListener('resize',()=>mindar.resize?.());
+  }catch(err){
+    console.error(err);
+    $('#cargando').classList.remove('oculta');
+    $('#cargando .cargando').style.display='none';
+    $('#error').innerHTML='No pudimos iniciar la cámara.<br>Revisa que diste permiso y que abriste el enlace con <b>https</b>.<br><br><button class="btn-azul" onclick="location.reload()">Reintentar</button>';
+  }
+}
+$('#activar').addEventListener('click',iniciar);
+</script>
+</body>
+</html>
