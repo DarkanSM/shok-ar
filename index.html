@@ -57,6 +57,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-fami
 <script type="importmap">
 {"imports":{
  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+ "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"}}
 </script>
 </head>
@@ -94,7 +95,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-fami
 
 <script type="module">
 import * as THREE from 'three';
-import { MindARThree } from 'mindar-image-three';
 
 /* ====== CONTENIDO (edita aquí textos, precios y sonidos) ====== */
 const AZUL = 0x0A3D91;
@@ -145,6 +145,7 @@ async function iniciar(){
   audio = new (window.AudioContext||window.webkitAudioContext)(); audio.resume();
   $('#inicio').classList.add('oculta'); $('#cargando').classList.remove('oculta');
   try{
+    const { MindARThree } = await import('mindar-image-three');
     const mindar = new MindARThree({container:$('#ar'), imageTargetSrc:'assets/targets.mind', uiLoading:'no', uiScanning:'no', uiError:'no'});
     const {renderer,scene,camera} = mindar;
     const ancla = mindar.addAnchor(0);
@@ -199,6 +200,7 @@ async function iniciar(){
     window.addEventListener('resize',()=>mindar.resize?.());
   }catch(err){
     console.error(err);
+    $('#cargando').classList.remove('oculta');
     $('#cargando .cargando').style.display='none';
     $('#error').innerHTML='No pudimos iniciar la cámara.<br>Revisa que diste permiso y que abriste el enlace con <b>https</b>.<br><br><button class="btn-azul" onclick="location.reload()">Reintentar</button>';
   }
