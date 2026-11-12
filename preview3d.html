@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shok · Vista previa 3D (three.js)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--azul:#0A3D91;--crema:#F6EFE2;--osc:#072C6B}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-family:'Fredoka',sans-serif;color:var(--azul)}
+canvas{display:block}
+#ui{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 12px max(14px,env(safe-area-inset-bottom))}
+#fila{display:flex;gap:10px;width:100%;justify-content:center}
+.cat{flex:1;max-width:150px;background:var(--crema);border:3px solid var(--azul);border-radius:18px;padding:10px 8px;cursor:pointer;box-shadow:0 5px 0 var(--osc)}
+.cat img{width:100%;height:30px;object-fit:contain;display:block}
+.cat.activo{background:var(--azul)}.cat.activo img{filter:brightness(0) invert(.95)}
+button.glb{font:700 15px 'Fredoka';background:var(--azul);color:var(--crema);border:0;border-radius:999px;padding:10px 20px;cursor:pointer;box-shadow:0 4px 0 var(--osc)}
+#nota{font-size:12px;text-align:center;max-width:440px;line-height:1.35}
+#titulo{position:fixed;top:14px;left:0;right:0;text-align:center;font-weight:700;font-size:18px}
+</style>
+<script type="importmap">
+{"imports":{
+ "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+ "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="titulo">Vista previa 3D · arrastra para girar</div>
+<div id="ui">
+  <div id="fila">
+    <button class="cat" data-k="cafe"><img src="assets/btn-cafe.png" alt="Café"></button>
+    <button class="cat" data-k="cocteles"><img src="assets/btn-cocteles.png" alt="Cocteles"></button>
+    <button class="cat" data-k="snacks"><img src="assets/btn-snacks.png" alt="Snacks"></button>
+  </div>
+  <button class="glb" id="glb">Descargar .glb</button>
+  <div id="nota">Para verlo en el editor oficial: threejs.org/editor → File → Import → elige el .glb descargado.</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { crearModelo } from './modelos.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xF6EFE2);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, .1, 50); camera.position.set(0, 1, 3.2);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899bb, 1.1));
+const sol = new THREE.DirectionalLight(0xffffff, 1.5); sol.position.set(2, 3, 3); scene.add(sol);
+const ctrl = new OrbitControls(camera, renderer.domElement); ctrl.enableDamping = true; ctrl.autoRotate = true; ctrl.autoRotateSpeed = 2.5; ctrl.enablePan = false;
+
+const logo = new THREE.TextureLoader().load('assets/logo.png', t => t.colorSpace = THREE.SRGBColorSpace);
+let actual = null, clave = 'cocteles';
+function mostrar(k) {
+  clave = k; if (actual) scene.remove(actual);
+  actual = crearModelo(k, logo); scene.add(actual);
+  document.querySelectorAll('.cat').forEach(b => b.classList.toggle('activo', b.dataset.k === k));
+}
+document.querySelectorAll('.cat').forEach(b => b.onclick = () => mostrar(b.dataset.k));
+document.getElementById('glb').onclick = () => {
+  new GLTFExporter().parse(actual, res => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([res], { type: 'model/gltf-binary' }));
+    a.download = `shok-${clave}.glb`; a.click();
+  }, e => alert('No se pudo exportar: ' + e), { binary: true });
+};
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+mostrar('cocteles');
+renderer.setAnimationLoop(() => { ctrl.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

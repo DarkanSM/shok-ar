@@ -21,6 +21,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-fami
 .texto{max-width:320px;line-height:1.4;font-size:16px}
 .btn-azul{font:700 20px 'Fredoka',sans-serif;color:var(--crema);background:var(--azul);border:0;border-radius:999px;padding:16px 34px;box-shadow:0 6px 0 var(--azul-osc);cursor:pointer}
 .btn-azul:active{transform:translateY(4px);box-shadow:0 2px 0 var(--azul-osc)}
+.botonera{display:flex;flex-direction:column;align-items:center;gap:14px}
+.btn-azul.alt{background:var(--crema);color:var(--azul);border:3px solid var(--azul);padding:13px 31px}
 .pasos{display:flex;gap:10px;font-size:13px;font-weight:600}
 .pasos span{border:2px solid var(--azul);border-radius:999px;padding:6px 12px}
 .cargando{font-weight:600}
@@ -58,6 +60,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-fami
 {"imports":{
  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+ "mindar-face-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js",
  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"}}
 </script>
 </head>
@@ -70,7 +73,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--crema);font-fami
   <div class="lema">Cambia de modo</div>
   <p class="texto">Apunta la cámara de tu celular al menú y activa el <b>Bar Mode</b> en realidad aumentada.</p>
   <div class="pasos"><span>1 · Permite la cámara</span><span>2 · Apunta al menú</span></div>
-  <button class="btn-azul" id="activar">Activar Bar Mode</button>
+  <div class="botonera"><button class="btn-azul" id="activar">Ver menú</button><button class="btn-azul alt" id="barmode">Activar Bar Mode 🐱</button></div>
 </section>
 
 <section class="pantalla oculta" id="cargando">
@@ -127,6 +130,8 @@ function tono(notas,onda='sine',vol=.18){
   });
 }
 
+function audioOn(){ audio=audio||new (window.AudioContext||window.webkitAudioContext)(); audio.resume(); }
+
 /* ====== UI ====== */
 const $=s=>document.querySelector(s);
 const botones=$('#botones'), guia=$('#guia'), dialogo=$('#dialogo');
@@ -142,7 +147,7 @@ function cerrarDialogo(){ dialogo.classList.remove('abierto'); }
 
 /* ====== AR ====== */
 async function iniciar(){
-  audio = new (window.AudioContext||window.webkitAudioContext)(); audio.resume();
+  audioOn();
   $('#inicio').classList.add('oculta'); $('#cargando').classList.remove('oculta');
   try{
     const { MindARThree } = await import('mindar-image-three');
@@ -206,6 +211,20 @@ async function iniciar(){
   }
 }
 $('#activar').addEventListener('click',iniciar);
+
+/* ====== BAR MODE: filtro del gato con cámara frontal ====== */
+async function iniciarBar(){
+  audioOn(); $('#inicio').classList.add('oculta'); $('#cargando').classList.remove('oculta');
+  try{
+    const { iniciarFiltro } = await import('./filtro.js');
+    await iniciarFiltro({ container:$('#ar'), audio:()=>audio, listo:()=>$('#cargando').classList.add('oculta') });
+  }catch(err){
+    console.error(err);
+    $('#cargando .cargando').style.display='none';
+    $('#error').innerHTML='No pudimos iniciar el Bar Mode.<br>Revisa el permiso de la cámara y que abriste el enlace con <b>https</b>.<br><br><button class="btn-azul" onclick="location.reload()">Reintentar</button>';
+  }
+}
+$('#barmode').addEventListener('click',iniciarBar);
 </script>
 </body>
 </html>
